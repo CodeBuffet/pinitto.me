@@ -7,18 +7,25 @@ exports.inArray = function(needle, haystack) {
     return false
 }
 
-var hasher = function(count, hash, sha1, callback) {
-	if (count == 0) return callback(sha1)
-	sha1.update(hash)
-	process.nextTick(function() { hasher(count-1, hash, sha1, callback) })
-}
-
 exports.hashPassword = function(password, callback) {
-    var hash = config.passwordSalt + password + config.password.salt
-    var sha1 = crypto.createHash('sha1')
-    hasher(config.password.hashes, hash, sha1, function(password) {
-    	callback(sha1.digest('hex'))
-    });
+    var algorithm = 'sha256';
+    var hash, hmac;
+
+    hmac = crypto.createHmac(algorithm, config.password.salt);
+
+    // change to 'binary' if you want a binary digest
+    hmac.setEncoding('hex');
+
+    // write in the text that you want the hmac digest for
+    hmac.write(password);
+
+    // you can't read from the stream until you call end()
+    hmac.end();
+
+    // read out hmac digest
+    hash = hmac.read(); 
+
+    callback(hash);   
 }
 
 exports.totals = { cards: 0, boards: 0, sockets: 0 }
