@@ -6,14 +6,16 @@
 
 */
 
-define(['formatters/checkmark'], function(checkmark) {
+define(['util/formatters/checkmark'], function(checkmark) {
     
 	var formatters = [checkmark]
 
-    return function formatText(noteText) {
+    return function(card, noteText) {
     	for(var i = 0; i < formatters.length; i++) {
-    		noteText = formatters[i].format(noteText);
+    		noteText = formatters[i].format(card, noteText);
     	}
+
+    	return noteText;
     };
 
 })

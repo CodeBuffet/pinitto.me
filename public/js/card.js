@@ -1,8 +1,8 @@
 define(['jquery', 'socket', 'util/determine-css-class', 'board',
          'util/notification', 'board/infinite-drag', 'user',
-         'viewport', 'util/grid-size', 'throttle', 'zoom-js'],
+         'viewport', 'util/grid-size', 'throttle', 'zoom-js', 'util/smartnote-formatter'],
     function($, socket, determineCssClass, board, notification,
-        infiniteDrag, user, viewport, gridCalc, throttle) {
+        infiniteDrag, user, viewport, gridCalc, throttle, zoomjs, smartnote) {
 
     Card.prototype.bringToFront = function(event, element) {
 
@@ -146,7 +146,14 @@ define(['jquery', 'socket', 'util/determine-css-class', 'board',
             board.zIndex = parseInt(card.css('z-index'));
         }
         var paragraphs = card.find('p');
+        var textView = $('<div class="textView" />');
+        //textView.css('background', '#fff');
+        textView.css('width', parseFloat(card.css('width').replace('px', '') - 10))
+            .css('height', parseFloat(card.css('height').replace('px', '') - 10));
+        textView.appendTo(card);
+
         textarea = $(document.createElement('textarea'));
+        textarea.css('display', 'none');
         textarea.css('width', parseFloat(card.css('width').replace('px', '') - 10))
             .css('height', parseFloat(card.css('height').replace('px', '') - 10));
         textarea.appendTo(card);
@@ -154,6 +161,7 @@ define(['jquery', 'socket', 'util/determine-css-class', 'board',
         paragraphs.each(function() {
             content += ($(this).html() || "") + "\n";
         })
+        textView.html(smartnote(card, content));
         $(card).find('textarea').val($('<div/>').html(content).text());
         paragraphs.remove();
         var self = this
@@ -161,6 +169,22 @@ define(['jquery', 'socket', 'util/determine-css-class', 'board',
             textarea.attr('disabled', 'disabled')
             return
         }
+        // Wrap the function so we keep the current textView and textArea
+        (function(card, textView, textarea){
+            textView.click(function(e) {
+                if($(e.target).is('input')) return true;
+                textView.css('display', 'none');
+                textarea.css('display', 'inline');
+            });
+            textarea.blur(function(e) {
+
+                var content = $(card).find('textarea').val();
+
+                textView.css('display', 'inline');
+                textarea.css('display', 'none');
+                textView.html(smartnote(card, content));
+            });
+        })(card, textView, textarea)
         card.draggable({
             cursor : 'move',
             keyboard : true,
@@ -355,7 +379,6 @@ define(['jquery', 'socket', 'util/determine-css-class', 'board',
     });
     $('.viewport').on('input propertychange', '.card textarea', throttle(function(event) {
         socket.emit('card.text-change', {cardId: $(this).parent().attr('id'), content: $(this).val()})
-        content = $(this).val();
         content = $(this).val();
         if (content.length == 0) {
             content = '<i>No content</i>';
